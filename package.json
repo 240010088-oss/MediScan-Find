@@ -1,26 +1,24 @@
 {
-  "name": "mediscan-find",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "name": "functions",
+  "description": "Cloud Functions for Firebase",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "serve": "firebase emulators:start --only functions",
+    "shell": "firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
+  "engines": {
+    "node": "24"
+  },
+  "main": "index.js",
   "dependencies": {
-    "@opentelemetry/api": "^1.9.1",
-    "@vitalets/google-translate-api": "^9.2.1",
-    "axios": "^1.15.0",
-    "bcryptjs": "^3.0.3",
-    "cloudinary": "^2.9.0",
-    "dotenv": "^17.4.1",
     "express": "^5.2.1",
-    "express-session": "^1.19.0",
-    "firebase-admin": "^13.8.0",
-    "multer": "^2.1.1",
-    "translate": "^3.0.1"
-  }
+    "firebase-admin": "^13.6.0",
+    "firebase-functions": "^7.0.0"
+  },
+  "devDependencies": {
+    "firebase-functions-test": "^3.4.1"
+  },
+  "private": true
 }
