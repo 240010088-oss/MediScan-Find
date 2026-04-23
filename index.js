@@ -1,4 +1,4 @@
-const express = require('express');
+const app.use(express.static('public'));
 const path = require('path');
 const axios = require('axios');
 const cloudinary = require('cloudinary').v2;
