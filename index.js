@@ -24,7 +24,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(session({
     secret: process.env.SESSION_SECRET || 'mediscan_secret_key',
     resave: false,
-    saveUninitialized: true
+    saveUninitialized: false
 }));
 
 // ═══════════════════════════════════════════════
@@ -36,19 +36,15 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Verificar que el archivo de credenciales existe
-const serviceAccountPath = path.join(__dirname, 'serviceAccountKey.json');
-if (!fs.existsSync(serviceAccountPath)) {
-    console.error('❌ ERROR: No se encontró serviceAccountKey.json');
-    console.error('   Descarga una nueva clave en: Firebase Console → Configuración → Cuentas de servicio');
-    process.exit(1);
-}
-
-const serviceAccount = require('./serviceAccountKey.json');
-
-// Inicializar Firebase solo si no fue inicializado antes
+// Inicializar Firebase desde variables de entorno
 if (!admin.apps.length) {
-    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+    admin.initializeApp({
+        credential: admin.credential.cert({
+            project_id: process.env.FIREBASE_PROJECT_ID,
+            client_email: process.env.FIREBASE_CLIENT_EMAIL,
+            private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n')
+        })
+    });
 }
 const db = admin.firestore();
 console.log('🔥 Conectado a Firebase Firestore con éxito');
@@ -273,10 +269,11 @@ async function obtenerInfoMedicamento(medicamento) {
 //  MIDDLEWARE: verificar sesión en rutas protegidas
 // ═══════════════════════════════════════════════
 function verificarSesion(req, res, next) {
-    const usuarioId = req.query.usuarioId || req.body.usuarioId;
+    const usuarioId = req.session.usuarioId || req.query.usuarioId || req.body.usuarioId;
     if (!usuarioId || usuarioId === 'undefined') {
         return res.status(401).json({ error: 'No autenticado' });
     }
+    req.usuarioId = usuarioId;
     next();
 }
 
@@ -330,7 +327,7 @@ app.post('/api/login', async (req, res) => {
 });
 
 app.get('/api/perfil', verificarSesion, async (req, res) => {
-    const { usuarioId } = req.query;
+    const usuarioId = req.usuarioId;
     try {
         const userDoc = await db.collection('usuarios').doc(usuarioId).get();
         if (!userDoc.exists) return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -379,7 +376,7 @@ app.post('/api/subir-receta', upload.single('imagen'), async (req, res) => {
 });
 
 app.get('/api/recetas', verificarSesion, async (req, res) => {
-    const { usuarioId } = req.query;
+    const usuarioId = req.usuarioId;
     try {
         const snapshot = await db.collection('recetas')
             .where('usuarioId', '==', usuarioId).orderBy('fecha', 'desc').get();
@@ -420,9 +417,10 @@ app.get('/api/buscar', async (req, res) => {
             lon: p.lon
         }));
 
-        if (usuarioId && usuarioId !== 'undefined') {
+        const idUsuario = req.session.usuarioId || usuarioId;
+        if (idUsuario && idUsuario !== 'undefined') {
             db.collection('historial').add({
-                usuarioId, medicamento,
+                usuarioId: idUsuario, medicamento,
                 lat: latNum, lng: lngNum,
                 fecha: new Date()
             })
